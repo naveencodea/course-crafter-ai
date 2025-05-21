@@ -1,13 +1,6 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportAsText = exportAsText;
-exports.exportAsPDF = exportAsPDF;
-const fs_extra_1 = __importDefault(require("fs-extra"));
-const path_1 = __importDefault(require("path"));
-const pdfkit_1 = __importDefault(require("pdfkit"));
+import fs from 'fs-extra';
+import path from 'path';
+import PDFDocument from 'pdfkit';
 // Get the current directory in a way that works with both CommonJS and TypeScript
 const getCurrentFilename = () => {
     try {
@@ -27,7 +20,7 @@ const getCurrentFilename = () => {
 const getCurrentDirname = () => {
     try {
         // @ts-ignore - This is a workaround for ESM/CommonJS interop
-        return __dirname || path_1.default.dirname(getCurrentFilename());
+        return __dirname || path.dirname(getCurrentFilename());
     }
     catch (e) {
         return process.cwd();
@@ -36,13 +29,13 @@ const getCurrentDirname = () => {
 const __filename = getCurrentFilename();
 const __dirname = getCurrentDirname();
 // Ensure exports directory exists
-const EXPORTS_DIR = path_1.default.join(process.cwd(), 'exports');
+const EXPORTS_DIR = path.join(process.cwd(), 'exports');
 /**
  * Ensures the exports directory exists
  */
 function ensureExportsDir() {
     try {
-        fs_extra_1.default.ensureDirSync(EXPORTS_DIR);
+        fs.ensureDirSync(EXPORTS_DIR);
     }
     catch (error) {
         throw new Error(`Failed to create exports directory: ${error.message}`);
@@ -55,7 +48,7 @@ function ensureExportsDir() {
  * @returns {Promise<string>} - Name of the generated file
  * @throws {Error} - If there's an error exporting the file
  */
-async function exportAsText(content, fileId) {
+export async function exportAsText(content, fileId) {
     if (!content || typeof content !== 'string') {
         throw new Error('Content must be a non-empty string');
     }
@@ -65,8 +58,8 @@ async function exportAsText(content, fileId) {
     try {
         ensureExportsDir();
         const fileName = `${fileId}.txt`;
-        const filePath = path_1.default.join(EXPORTS_DIR, fileName);
-        await fs_extra_1.default.writeFile(filePath, content, { encoding: 'utf8' });
+        const filePath = path.join(EXPORTS_DIR, fileName);
+        await fs.writeFile(filePath, content, { encoding: 'utf8' });
         return fileName;
     }
     catch (error) {
@@ -81,7 +74,7 @@ async function exportAsText(content, fileId) {
  * @returns {Promise<string>} - Name of the generated file
  * @throws {Error} - If there's an error exporting the file
  */
-async function exportAsPDF(content, fileId) {
+export async function exportAsPDF(content, fileId) {
     if (!content || typeof content !== 'string') {
         throw new Error('Content must be a non-empty string');
     }
@@ -92,9 +85,9 @@ async function exportAsPDF(content, fileId) {
         try {
             ensureExportsDir();
             const fileName = `${fileId}.pdf`;
-            const filePath = path_1.default.join(EXPORTS_DIR, fileName);
-            const doc = new pdfkit_1.default();
-            const stream = fs_extra_1.default.createWriteStream(filePath);
+            const filePath = path.join(EXPORTS_DIR, fileName);
+            const doc = new PDFDocument();
+            const stream = fs.createWriteStream(filePath);
             // Handle stream errors
             stream.on('error', (error) => {
                 console.error('Stream error:', error);
@@ -141,7 +134,7 @@ async function exportAsPDF(content, fileId) {
         }
     });
 }
-exports.default = {
+export default {
     exportAsText,
     exportAsPDF
 };

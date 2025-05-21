@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "nodemon --watch 'src/**/*.ts' --exec 'node --loader ts-node/esm' src/server.ts",
+    "dev": "NODE_OPTIONS='--no-warnings' tsx watch src/server.ts",
     "dev:debug": "nodemon --inspect --watch 'src/**/*.ts' --exec 'ts-node' src/server.ts",
     "test": "jest",
     "lint": "eslint . --ext .ts",
@@ -45,25 +45,27 @@
     "html-to-text": "^9.0.5",
     "mongoose": "^8.15.0",
     "next-auth": "^4.24.11",
-    "nodemailer": "^7.0.3",
+    "nodemailer": "6.8.0",
     "openai": "^4.0.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pdfkit": "^0.14.0",
     "pug": "^3.0.3",
     "socket.io": "^4.8.1",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",
     "@types/express": "^4.17.17",
     "@types/fs-extra": "^11.0.1",
     "@types/jest": "^29.5.0",
-    "@types/node": "^20.1.0",
+    "@types/node": "^20.17.50",
     "@types/pdfkit": "^0.13.7",
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^5.59.0",
     "@typescript-eslint/parser": "^5.59.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.38.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
@@ -72,6 +74,7 @@
     "prettier": "^2.8.7",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.1",
+    "tsx": "^4.19.4",
     "typescript": "^5.0.4"
   },
   "jest": {

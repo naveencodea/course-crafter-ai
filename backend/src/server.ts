@@ -13,7 +13,7 @@ import { connectDB } from './config/db.js';
 import { errorHandler } from './middleware/error.js';
 import authRoutes from './routes/auth.js';
 import courseRoutes from './routes/courses.js';
-import logger from './utils/logger.js'; // Winston logger
+import logger from './utils/logger.js';
 
 // Load environment variables early
 dotenv.config();
@@ -23,10 +23,6 @@ const PORT = process.env.PORT || 5000;
 const API_PREFIX = '/api/v1';
 const EXPORTS_DIR = path.join(process.cwd(), 'exports');
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-// Directory setup
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Ensure necessary directories exist
 fs.ensureDirSync(EXPORTS_DIR);
@@ -52,7 +48,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(EXPORTS_DIR));
 app.use(morgan('combined', {
   stream: {
-    write: (message) => logger.info(message.trim()),
+    write: (message: string) => logger.info(message.trim()),
   },
 }));
 
@@ -70,6 +66,14 @@ app.use(`${API_PREFIX}/`, apiLimiter);
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/courses`, courseRoutes);
 
+// Add root API health endpoints for HEAD and GET
+app.route('/api')
+  .get((req: Request, res: Response) => res.sendStatus(200))
+  .head((req: Request, res: Response) => res.sendStatus(200));
+app.route('/api/v1')
+  .get((req: Request, res: Response) => res.sendStatus(200))
+  .head((req: Request, res: Response) => res.sendStatus(200));
+
 // Health check (GET + HEAD)
 app.route(`${API_PREFIX}/health`)
   .get((req: Request, res: Response) => {
@@ -85,6 +89,13 @@ app.route(`${API_PREFIX}/health`)
 
 // Error handler
 app.use(errorHandler);
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Promise Rejection:', reason);
+  // Close server & exit process
+  httpServer.close(() => process.exit(1));
+});
 
 // Socket.IO
 io.on('connection', (socket) => {

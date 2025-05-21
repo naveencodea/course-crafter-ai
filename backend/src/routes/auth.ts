@@ -10,9 +10,6 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Import custom type declarations using dynamic import
-await import('../../types/express');
-
 // Interface for user profile update data
 interface UserProfileUpdate {
   displayName?: string;

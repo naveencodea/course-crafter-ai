@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateCourseContent = generateCourseContent;
-const openai_1 = require("openai");
+import { OpenAI } from 'openai';
 // Initialize OpenAI with API key from environment variables
-const openai = new openai_1.OpenAI({
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 /**
@@ -12,7 +9,7 @@ const openai = new openai_1.OpenAI({
  * @returns {Promise<string>} - Generated course content
  * @throws {Error} - If there's an error generating the content
  */
-async function generateCourseContent(prompt) {
+export async function generateCourseContent(prompt) {
     if (!process.env.OPENAI_API_KEY) {
         throw new Error('OpenAI API key is not configured');
     }
@@ -47,7 +44,7 @@ async function generateCourseContent(prompt) {
         throw new Error(`Failed to generate course content: ${error.message}`);
     }
 }
-exports.default = {
+export default {
     generateCourseContent
 };
 //# sourceMappingURL=promptEngine.js.map

@@ -1,11 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
+import { Router } from 'express';
 // Import the auth instance from firebase config
-const firebase_1 = require("../config/firebase");
-// Import custom type declarations
-require("../types/express");
-const router = (0, express_1.Router)();
+import { auth as firebaseAuth } from '../config/firebase.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// Import custom type declarations using dynamic import
+await import('../../types/express');
+const router = Router();
 // Middleware to verify Firebase ID token
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -14,7 +16,7 @@ const verifyToken = async (req, res, next) => {
     }
     const idToken = authHeader.split('Bearer ')[1];
     try {
-        const decodedToken = await firebase_1.auth.verifyIdToken(idToken);
+        const decodedToken = await firebaseAuth.verifyIdToken(idToken);
         req.user = decodedToken;
         next();
     }
@@ -33,7 +35,7 @@ router.get('/me', verifyToken, async (req, res) => {
         if (!req.user) {
             return res.status(401).json({ error: 'User not authenticated' });
         }
-        const user = await firebase_1.auth.getUser(req.user.uid);
+        const user = await firebaseAuth.getUser(req.user.uid);
         // Map provider data to ensure proper typing
         const providerData = user.providerData.map(provider => ({
             providerId: provider.providerId || null,
@@ -74,7 +76,7 @@ router.put('/profile', verifyToken, async (req, res) => {
             updateData.displayName = displayName;
         if (photoURL !== undefined)
             updateData.photoURL = photoURL;
-        const user = await firebase_1.auth.updateUser(req.user.uid, updateData);
+        const user = await firebaseAuth.updateUser(req.user.uid, updateData);
         res.status(200).json({
             uid: user.uid,
             email: user.email,
@@ -91,5 +93,5 @@ router.put('/profile', verifyToken, async (req, res) => {
         });
     }
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=auth.js.map

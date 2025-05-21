@@ -13,11 +13,28 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend
 echo "Starting backend..."
-cd backend && NODE_OPTIONS='--experimental-specifier-resolution=node --no-warnings' npm run dev &
+cd backend
+if [ ! -d "node_modules" ]; then
+  npm install || {
+    echo "npm install failed. Trying with --legacy-peer-deps..."
+    npm install --legacy-peer-deps || {
+      echo "npm install failed even with --legacy-peer-deps. Please check your dependencies."
+      exit 1
+    }
+  }
+fi
+npm run dev &
 
 # Start frontend
 echo "Starting frontend..."
-cd frontend && npm run dev &
+cd ../frontend
+if [ ! -d "node_modules" ]; then
+  npm install
+fi
+if ! npx --no vite --version > /dev/null 2>&1; then
+  npm install vite --save-dev
+fi
+npm run dev &
 
 # Keep the script running
 wait
