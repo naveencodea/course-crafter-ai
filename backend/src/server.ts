@@ -1,138 +1,132 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
-import express, { NextFunction, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs-extra';
 import http from 'http';
-import path from 'path';
+import morgan from 'morgan';
+import path, { dirname } from 'path';
 import { Server } from 'socket.io';
-import { connectDB } from './config/db';
-import { errorHandler } from './middleware/error';
-import authRoutes from './routes/auth';
-import courseRoutes from './routes/courses';
+import { fileURLToPath } from 'url';
 
-// Load environment variables
+import { connectDB } from './config/db.js';
+import { errorHandler } from './middleware/error.js';
+import authRoutes from './routes/auth.js';
+import courseRoutes from './routes/courses.js';
+import logger from './utils/logger.js'; // Winston logger
+
+// Load environment variables early
 dotenv.config();
-
-// Create Express app
-const app = express();
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
 
 // Constants
 const PORT = process.env.PORT || 5000;
 const API_PREFIX = '/api/v1';
 const EXPORTS_DIR = path.join(process.cwd(), 'exports');
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-// Connect to MongoDB
-connectDB();
+// Directory setup
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Ensure exports directory exists
+// Ensure necessary directories exist
 fs.ensureDirSync(EXPORTS_DIR);
+
+// Initialize Express
+const app = express();
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: FRONTEND_URL,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  origin: FRONTEND_URL,
+  credentials: true,
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(EXPORTS_DIR));
+app.use(morgan('combined', {
+  stream: {
+    write: (message) => logger.info(message.trim()),
+  },
+}));
 
 // Rate limiting
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes',
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests from this IP, please try again later',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
 });
-
-// Apply rate limiting to all API routes
 app.use(`${API_PREFIX}/`, apiLimiter);
 
 // Routes
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/courses`, courseRoutes);
 
-// Health check endpoint
-app.get(`${API_PREFIX}/health`, (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+// Health check (GET + HEAD)
+app.route(`${API_PREFIX}/health`)
+  .get((req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  })
+  .head((req: Request, res: Response) => {
+    res.sendStatus(200);
   });
-});
 
-// Error handling middleware
+// Error handler
 app.use(errorHandler);
 
-// Socket.io connection
-io.on('connection', (socket: any) => {
-  console.log('New client connected');
-  
+// Socket.IO
+io.on('connection', (socket) => {
+  logger.info('🔌 New client connected');
   socket.on('disconnect', () => {
-    console.log('Client disconnected');
+    logger.info('❌ Client disconnected');
   });
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err: Error) => {
-  console.error('Unhandled Rejection:', err);
-  // Close server & exit process
-  httpServer.close(() => process.exit(1));
+// Graceful shutdown
+const shutdown = (reason: string, err?: Error) => {
+  logger.error(`💥 ${reason}`);
+  if (err) logger.error(`${err.name}: ${err.message}\n${err.stack}`);
+  httpServer.close(() => {
+    logger.info('🔒 Server closed.');
+    process.exit(1);
+  });
+};
+
+process.on('unhandledRejection', (err) => shutdown('Unhandled Promise Rejection'));
+process.on('uncaughtException', (err) => shutdown('Uncaught Exception'));
+process.on('SIGTERM', () => {
+  logger.info('👋 SIGTERM received.');
+  httpServer.close(() => {
+    logger.info('💥 Process terminated.');
+  });
 });
 
-// Start server
+// Start server only after DB is connected
 const startServer = async () => {
   try {
+    await connectDB();
     httpServer.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      logger.info(`🚀 CourseCraft API running on http://localhost:${PORT}`);
+      logger.info(`📚 Health check: http://localhost:${PORT}${API_PREFIX}/health`);
     });
-  } catch (error) {
-    console.error('Error starting server:', error);
-    process.exit(1);
+  } catch (err: any) {
+    shutdown('Failed to start server', err);
   }
 };
 
-// Start the server
-const server = httpServer.listen(PORT, () => {
-  console.log(`🚀 CourseCraft API running on http://localhost:${PORT}`);
-  console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-  console.log(`🔄 Health check at http://localhost:${PORT}/health`);
-});
+startServer();
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err: Error) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-  server.close(() => {
-    process.exit(1);
-  });
-});
+export { app, httpServer, io };
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err: Error) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-// Handle SIGTERM
-process.on('SIGTERM', () => {
-  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
-  server.close(() => {
-    console.log('💥 Process terminated!');
-  });
-});
-
-export { app, io, server };

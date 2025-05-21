@@ -1,9 +1,17 @@
 import { Router, Request, Response, NextFunction } from 'express';
 // Import the auth instance from firebase config
-import { auth as firebaseAuth } from '../config/firebase';
+import { auth as firebaseAuth } from '../config/firebase.js';
 
 // Import custom type declarations
-import '../types/express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Import custom type declarations using dynamic import
+await import('../../types/express');
 
 // Interface for user profile update data
 interface UserProfileUpdate {

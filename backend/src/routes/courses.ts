@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { generateCourse, exportCourse } from '../controllers/courseController';
-import { validate } from '../middleware/validation';
 import { body, param, query } from 'express-validator';
-import type { RequestHandler } from 'express';
+import { exportCourse, generateCourse } from '../controllers/courseController';
+import { validate } from '../middleware/validation';
 
 const router = Router();
 
